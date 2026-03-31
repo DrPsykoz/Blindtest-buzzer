@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Blindtest Buzzer - Écran Joueurs</title>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body class="players-screen tv-cinema">
+		<div class="cinema-bg"></div>
+		<div class="cinema-overlay"></div>
+		<main class="container players-main">
+			<section class="card cinema-card main-card">
+				<div class="section-title">
+					<div class="marquee">
+						Blindtest Cinéma • Silence dans la salle
+					</div>
+					<h1 class="title">Écran Joueurs</h1>
+				</div>
+				<div class="main-info">
+					<div id="playerWinner" class="winner">En attente…</div>
+				</div>
+				<div class="details">
+					<div id="playerSub" class="subtext">
+						Appuyez sur votre buzzer
+					</div>
+					<div id="playerCategory" class="subtext">Difficulté: —</div>
+					<div id="playerRecap" class="recap-panel hidden">
+						<div id="playerRecapTitle" class="subtext">
+							Récap scores
+						</div>
+						<div
+							id="playerRecapList"
+							class="players players-tv"
+						></div>
+					</div>
+					<div class="hint">
+						Cet écran se met à jour automatiquement.
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<aside class="card cinema-card leaderboard">
+			<div class="block-title">Classement</div>
+			<div id="playerList" class="players players-tv"></div>
+		</aside>
+
+		<script src="players.js"></script>
+	</body>
+</html>

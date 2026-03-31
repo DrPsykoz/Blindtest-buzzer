@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Blindtest Buzzer</title>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body>
+		<main class="container simple-dashboard">
+			<div class="main-left">
+				<section class="card">
+					<div class="block-title">Gestion de la partie</div>
+					<div class="status-row">
+						<div class="pill" id="connectionStatus">
+							Gamepad: en attente…
+						</div>
+						<div class="pill" id="currentCategory">
+							Difficulté: —
+						</div>
+						<div class="pill" id="gameStatus">Partie: arrêtée</div>
+					</div>
+					<div id="winner" class="winner">Aucun buzzer</div>
+					<div class="actions">
+						<button id="startGameBtn" class="primary">
+							Lancer la partie
+						</button>
+						<button id="armBtn" class="primary">Activer</button>
+						<button id="resetBtn">Réinitialiser</button>
+						<button id="assignBtn">Mode attribution</button>
+						<button id="openPlayersBtn">
+							Ouvrir écran joueurs
+						</button>
+					</div>
+					<div class="judge-actions">
+						<button id="undoPointBtn">Annuler dernier point</button>
+						<button id="resetScoresBtn" class="danger">
+							Reset scores
+						</button>
+					</div>
+				</section>
+
+				<section class="card">
+					<div class="block-title">Musique en cours</div>
+					<div class="now-playing">
+						<div>
+							<div id="nowPlayingTitle" class="now-title">
+								Aucun morceau
+							</div>
+							<div id="nowPlayingMeta" class="now-meta">—</div>
+							<div id="nowPlayingStatus" class="now-status">
+								En pause
+							</div>
+						</div>
+						<div class="row">
+							<button id="validateBtn" class="primary" disabled>
+								Réponse OK (+1)
+							</button>
+							<button id="invalidateBtn" class="danger" disabled>
+								Réponse KO
+							</button>
+							<button id="localPlayBtn" class="primary">
+								Lire
+							</button>
+							<button id="localPauseBtn">Pause</button>
+							<button id="localNextBtn">Suivant</button>
+						</div>
+					</div>
+				</section>
+
+				<section class="card recap-card hidden" id="recapPanel">
+					<div class="block-title" id="recapTitle">Récap scores</div>
+					<div id="recapList" class="players players-list"></div>
+					<div class="recap-actions">
+						<button id="continueCategoryBtn" class="primary">
+							Continuer difficulté suivante
+						</button>
+					</div>
+				</section>
+			</div>
+
+			<aside class="main-right">
+				<section class="card">
+					<div class="block-title">Scores</div>
+					<div id="players" class="players players-list"></div>
+					<div class="hint">
+						Astuce: 1-4 au clavier si le buzzer n’est pas reconnu en
+						gamepad.
+					</div>
+				</section>
+			</aside>
+
+			<section class="card" id="localSection">
+				<div class="block-title">Configuration</div>
+				<div class="row">
+					<input
+						id="localFolderInput"
+						type="file"
+						accept="audio/*"
+						webkitdirectory
+					/>
+				</div>
+				<div class="row">
+					<label class="field">
+						<span>Difficulté</span>
+						<select id="localDifficulty">
+							<option value="all">Toutes</option>
+							<option value="facile">Facile</option>
+							<option value="moyen">Moyen</option>
+							<option value="difficile">Difficile</option>
+						</select>
+					</label>
+					<label class="field">
+						<span>Ordre</span>
+						<select id="localOrder">
+							<option value="manual">Manuel</option>
+							<option value="az">Nom A → Z</option>
+							<option value="za">Nom Z → A</option>
+							<option value="random">Aléatoire</option>
+						</select>
+					</label>
+				</div>
+				<div id="localSelection" class="hint">Aucune sélection.</div>
+				<div class="hint">
+					Astuce: place tes fichiers dans des dossiers “facile / moyen
+					/ difficile”.
+				</div>
+				<div class="local-lists">
+					<div class="local-panel">
+						<h3>Fichiers valides</h3>
+						<div id="localResults" class="results"></div>
+					</div>
+					<div class="local-panel">
+						<h3>À corriger <span id="localInvalidCount"></span></h3>
+						<div id="localInvalidResults" class="results"></div>
+						<div class="hint">
+							Ces fichiers ne sont pas dans un dossier de
+							difficulté.
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="card">
+				<div class="block-title">Debug</div>
+				<pre id="debug" class="debug"></pre>
+			</section>
+		</main>
+
+		<script src="app.js"></script>
+	</body>
+</html>
