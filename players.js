@@ -74,6 +74,7 @@ const STATE = {
     completedDifficulty: null,
     nextDifficulty: null,
     roundStartTime: null,
+    roundPausedElapsed: null,
 };
 
 const POINTS_BY_DIFFICULTY = { facile: 50, moyen: 100, difficile: 200 };
@@ -84,7 +85,7 @@ function calcLivePoints() {
     const diff = STATE.currentDifficulty || 'facile';
     const maxPts = POINTS_BY_DIFFICULTY[diff] || 50;
     if (!STATE.roundStartTime) return maxPts;
-    const elapsed = (Date.now() - STATE.roundStartTime) / 1000;
+    const elapsed = (STATE.roundPausedElapsed != null ? STATE.roundPausedElapsed : Date.now() - STATE.roundStartTime) / 1000;
     const ratio = Math.max(0, 1 - elapsed / POINTS_DECAY_SECONDS);
     return Math.max(Math.round(maxPts * 0.1), Math.round(maxPts * ratio));
 }
@@ -213,6 +214,7 @@ function applyState(payload) {
     STATE.completedDifficulty = payload.completedDifficulty || null;
     STATE.nextDifficulty = payload.nextDifficulty || null;
     STATE.roundStartTime = payload.roundStartTime || null;
+    STATE.roundPausedElapsed = payload.roundPausedElapsed ?? null;
     renderWinner();
     renderPlayers();
     renderRecap();
@@ -314,7 +316,7 @@ function init() {
         }
     });
 
-    channel.postMessage({ type: 'request-state' });
+    if (channel) channel.postMessage({ type: 'request-state' });
     renderPlayers();
 }
 

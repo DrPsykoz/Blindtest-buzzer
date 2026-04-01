@@ -101,6 +101,7 @@ function broadcastState() {
             nextDifficulty: STATE.game.nextDifficulty,
             disqualifiedIds: STATE.disqualifiedIds,
             roundStartTime: STATE.roundStartTime,
+            roundPausedElapsed: STATE.roundPausedElapsed,
         },
     });
 }
@@ -710,7 +711,6 @@ function renderLocalTracks() {
     });
 
     if (!tracks.length) {
-        UI.localNow.textContent = 'Aucun fichier pour cette difficulté.';
         return;
     }
 
@@ -867,7 +867,12 @@ function playNextGameTrack() {
     const remaining = getRemainingTracksForDifficulty(nextDifficulty);
     const nextTrack = remaining[0];
     if (!nextTrack) {
-        playNextGameTrack();
+        STATE.game.started = false;
+        STATE.game.finished = true;
+        setArmed(false);
+        updateGameStatusUI();
+        updateNowPlaying(getCurrentTrack(), 'Terminé');
+        renderRecap();
         return;
     }
     if (!STATE.game.blacklistIds.includes(nextTrack.id)) {
@@ -952,6 +957,10 @@ function init() {
     localAudio.addEventListener('ended', () => nextLocalTrack());
     localAudio.addEventListener('play', () => updateNowPlaying(getCurrentTrack(), 'Lecture'));
     localAudio.addEventListener('pause', () => updateNowPlaying(getCurrentTrack(), 'En pause'));
+    localAudio.addEventListener('error', () => {
+        updateNowPlaying(getCurrentTrack(), 'Erreur');
+        nextLocalTrack();
+    });
 
     UI.armBtn.addEventListener('click', () => setArmed(!STATE.armed));
     UI.resetBtn.addEventListener('click', () => resetRound());
@@ -970,8 +979,8 @@ function init() {
 
     UI.invalidateBtn.addEventListener('click', () => {
         const playerId = STATE.lastWinnerId;
-        if (playerId) STATE.disqualifiedIds.push(playerId);
-        broadcastAnswerResult('ko', playerId, null);
+        if (playerId && !STATE.disqualifiedIds.includes(playerId)) STATE.disqualifiedIds.push(playerId);
+        broadcastAnswerResult('ko', playerId, null, 0);
         STATE.locked = false;
         STATE.lastWinnerId = null;
         UI.winner.textContent = 'Aucun buzzer';
