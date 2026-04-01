@@ -10,10 +10,10 @@
 		<main class="container simple-dashboard">
 			<div class="main-left">
 				<section class="card">
-					<div class="block-title">Gestion de la partie</div>
+					<div class="block-title">Partie</div>
 					<div class="status-row">
 						<div class="pill" id="connectionStatus">
-							Gamepad: en attente…
+							🎮 Gamepad: en attente…
 						</div>
 						<div class="pill" id="currentCategory">
 							Difficulté: —
@@ -21,29 +21,35 @@
 						<div class="pill" id="gameStatus">Partie: arrêtée</div>
 					</div>
 					<div id="winner" class="winner">Aucun buzzer</div>
-					<div class="actions">
-						<button id="startGameBtn" class="primary">
+
+					<div class="btn-grid">
+						<button id="startGameBtn" class="btn-lg primary">
+							<span class="btn-icon">▶</span>
 							Lancer la partie
 						</button>
-						<button id="armBtn" class="primary">Activer</button>
-						<button id="resetBtn">Réinitialiser</button>
-						<button id="assignBtn">Mode attribution</button>
-						<button id="openPlayersBtn">
-							Ouvrir écran joueurs
+						<button id="armBtn" class="btn-lg primary">
+							<span class="btn-icon">⚡</span>
+							Activer
 						</button>
 					</div>
-					<div class="judge-actions">
-						<button id="undoPointBtn">Annuler dernier point</button>
-						<button id="resetScoresBtn" class="danger">
-							Reset scores
+
+					<div class="btn-row-secondary">
+						<button id="resetBtn" class="btn-ghost">
+							↺ Réinitialiser
+						</button>
+						<button id="assignBtn" class="btn-ghost">
+							🎯 Attribution
+						</button>
+						<button id="openPlayersBtn" class="btn-ghost">
+							📺 Écran joueurs
 						</button>
 					</div>
 				</section>
 
 				<section class="card">
 					<div class="block-title">Musique en cours</div>
-					<div class="now-playing">
-						<div>
+					<div class="now-playing-card">
+						<div class="now-info">
 							<div id="nowPlayingTitle" class="now-title">
 								Aucun morceau
 							</div>
@@ -52,18 +58,46 @@
 								En pause
 							</div>
 						</div>
-						<div class="row">
-							<button id="validateBtn" class="primary" disabled>
-								Réponse OK (+1)
-							</button>
-							<button id="invalidateBtn" class="danger" disabled>
-								Réponse KO
-							</button>
-							<button id="localPlayBtn" class="primary">
-								Lire
-							</button>
-							<button id="localPauseBtn">Pause</button>
-							<button id="localNextBtn">Suivant</button>
+						<div class="now-controls">
+							<div class="btn-group-judge">
+								<button
+									id="validateBtn"
+									class="btn-judge btn-ok"
+									disabled
+								>
+									✓ Bonne réponse
+								</button>
+								<button
+									id="invalidateBtn"
+									class="btn-judge btn-ko"
+									disabled
+								>
+									✗ Mauvaise
+								</button>
+							</div>
+							<div class="btn-group-transport">
+								<button
+									id="localPlayBtn"
+									class="btn-transport"
+									title="Lire"
+								>
+									▶
+								</button>
+								<button
+									id="localPauseBtn"
+									class="btn-transport"
+									title="Pause"
+								>
+									⏸
+								</button>
+								<button
+									id="localNextBtn"
+									class="btn-transport"
+									title="Suivant"
+								>
+									⏭
+								</button>
+							</div>
 						</div>
 					</div>
 				</section>
@@ -72,8 +106,12 @@
 					<div class="block-title" id="recapTitle">Récap scores</div>
 					<div id="recapList" class="players players-list"></div>
 					<div class="recap-actions">
-						<button id="continueCategoryBtn" class="primary">
-							Continuer difficulté suivante
+						<button
+							id="continueCategoryBtn"
+							class="btn-lg primary"
+							style="width: 100%"
+						>
+							Continuer → difficulté suivante
 						</button>
 					</div>
 				</section>
@@ -84,8 +122,19 @@
 					<div class="block-title">Scores</div>
 					<div id="players" class="players players-list"></div>
 					<div class="hint">
-						Astuce: 1-4 au clavier si le buzzer n’est pas reconnu en
+						Astuce: 1-4 au clavier si le buzzer n'est pas reconnu en
 						gamepad.
+					</div>
+					<div class="btn-row-secondary" style="margin-top: 12px">
+						<button id="undoPointBtn" class="btn-ghost">
+							↺ Annuler pt
+						</button>
+						<button
+							id="resetScoresBtn"
+							class="btn-ghost btn-ghost-danger"
+						>
+							Reset scores
+						</button>
 					</div>
 				</section>
 			</aside>
@@ -122,8 +171,8 @@
 				</div>
 				<div id="localSelection" class="hint">Aucune sélection.</div>
 				<div class="hint">
-					Astuce: place tes fichiers dans des dossiers “facile / moyen
-					/ difficile”.
+					Astuce: place tes fichiers dans des dossiers "facile / moyen
+					/ difficile".
 				</div>
 				<div class="local-lists">
 					<div class="local-panel">

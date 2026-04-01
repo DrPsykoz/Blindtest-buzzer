@@ -38,6 +38,9 @@ const STATE = {
     armed: false,
     locked: false,
     assignMode: false,
+    disqualifiedIds: [],
+    roundStartTime: null,
+    roundPausedElapsed: null,
     players: [
         { id: 1, name: 'Racaille', color: '#ef4444', mapping: null, score: 0, soundFile: 'racaille.mp3', soundFreq: 600 },
         { id: 2, name: 'Ninja', color: '#3b82f6', mapping: null, score: 0, soundFile: 'ninja.mp3', soundFreq: 700 },
@@ -76,6 +79,9 @@ const LOCAL_ORDER_KEY = 'blindtest-local-order-v1';
 
 const DIFFICULTY_ORDER = ['facile', 'moyen', 'difficile'];
 
+const POINTS_BY_DIFFICULTY = { facile: 50, moyen: 100, difficile: 200 };
+const POINTS_DECAY_SECONDS = 30;
+
 const CHANNEL_NAME = 'blindtest-channel';
 const broadcastChannel = 'BroadcastChannel' in window ? new BroadcastChannel(CHANNEL_NAME) : null;
 
@@ -93,6 +99,8 @@ function broadcastState() {
             gameInRecap: STATE.game.inRecap,
             completedDifficulty: STATE.game.completedDifficulty,
             nextDifficulty: STATE.game.nextDifficulty,
+            disqualifiedIds: STATE.disqualifiedIds,
+            roundStartTime: STATE.roundStartTime,
         },
     });
 }
@@ -102,6 +110,14 @@ function broadcastPing(playerId) {
     broadcastChannel.postMessage({
         type: 'ping',
         payload: { playerId },
+    });
+}
+
+function broadcastAnswerResult(result, playerId, trackName, earnedPoints) {
+    if (!broadcastChannel) return;
+    broadcastChannel.postMessage({
+        type: 'answer-result',
+        payload: { result, playerId, trackName, earnedPoints },
     });
 }
 
@@ -169,6 +185,9 @@ function renderPlayers() {
 function setWinner(playerId) {
     const player = STATE.players.find((p) => p.id === playerId);
     STATE.lastWinnerId = playerId;
+    if (STATE.roundStartTime) {
+        STATE.roundPausedElapsed = Date.now() - STATE.roundStartTime;
+    }
     UI.winner.textContent = player ? `${player.name} a buzzé !` : 'Aucun buzzer';
     renderPlayers();
     if (player) {
@@ -182,6 +201,8 @@ function setWinner(playerId) {
 function resetRound() {
     STATE.locked = false;
     STATE.lastWinnerId = null;
+    STATE.disqualifiedIds = [];
+    STATE.roundPausedElapsed = null;
     UI.winner.textContent = 'Aucun buzzer';
     renderPlayers();
     setJudgeButtonsEnabled(false);
@@ -190,6 +211,7 @@ function resetRound() {
 
 function setArmed(value) {
     STATE.armed = value;
+    if (value) STATE.roundStartTime = Date.now();
     UI.armBtn.textContent = value ? 'Activé' : 'Activer';
     UI.armBtn.classList.toggle('primary', !value);
     UI.armBtn.classList.toggle('danger', value);
@@ -235,7 +257,7 @@ function handlePress(gamepadIndex, buttonIndex) {
     const player = findPlayerByMapping(gamepadIndex, buttonIndex);
     if (!player) return;
 
-    if (!STATE.armed || STATE.locked) {
+    if (!STATE.armed || STATE.locked || STATE.disqualifiedIds.includes(player.id)) {
         broadcastPing(player.id);
         return;
     }
@@ -281,7 +303,7 @@ function setupKeyboardFallback() {
         if (event.repeat) return;
         const playerId = keyMap[event.code];
         if (!playerId) return;
-        if (!STATE.armed || STATE.locked) {
+        if (!STATE.armed || STATE.locked || STATE.disqualifiedIds.includes(playerId)) {
             broadcastPing(playerId);
             return;
         }
@@ -423,12 +445,23 @@ function pauseAllPlayback() {
     pauseLocalTrack();
 }
 
+function calculatePoints() {
+    const diff = STATE.game.currentDifficulty || 'facile';
+    const maxPts = POINTS_BY_DIFFICULTY[diff] || 50;
+    if (!STATE.roundStartTime) return maxPts;
+    const elapsed = (STATE.roundPausedElapsed != null ? STATE.roundPausedElapsed : Date.now() - STATE.roundStartTime) / 1000;
+    const ratio = Math.max(0, 1 - elapsed / POINTS_DECAY_SECONDS);
+    return Math.max(Math.round(maxPts * 0.1), Math.round(maxPts * ratio));
+}
+
 function addPointToWinner() {
     const player = STATE.players.find((p) => p.id === STATE.lastWinnerId);
     if (!player) return;
-    STATE.scoreHistory.push({ playerId: player.id, delta: 1 });
-    player.score += 1;
+    const pts = calculatePoints();
+    STATE.scoreHistory.push({ playerId: player.id, delta: pts });
+    player.score += pts;
     renderPlayers();
+    return pts;
 }
 
 function updatePlayerScore(playerId, delta) {
@@ -651,7 +684,15 @@ function moveLocalTrack(index, direction) {
 
 function renderLocalTracks() {
     UI.localResults.innerHTML = '';
-    const tracks = getActiveLocalTracks();
+    // Build play-order list: facile → moyen → difficile, each sorted by current order mode
+    const tracks = [];
+    for (const diff of DIFFICULTY_ORDER) {
+        const bucket = orderTracks(
+            STATE.localTracks.filter((t) => t.difficulty === diff),
+            diff
+        );
+        tracks.push(...bucket);
+    }
     const invalid = STATE.localTracks.filter((t) => t.difficulty === 'inconnu');
 
     UI.localInvalidResults.innerHTML = '';
@@ -919,14 +960,33 @@ function init() {
     UI.startGameBtn.addEventListener('click', () => startGame());
 
     UI.validateBtn.addEventListener('click', () => {
-        addPointToWinner();
+        const track = getCurrentTrack();
+        const playerId = STATE.lastWinnerId;
+        const pts = addPointToWinner();
+        broadcastAnswerResult('ok', playerId, track?.name || null, pts || 0);
         resetRound();
         setArmed(false);
     });
 
     UI.invalidateBtn.addEventListener('click', () => {
-        resetRound();
-        setArmed(false);
+        const playerId = STATE.lastWinnerId;
+        if (playerId) STATE.disqualifiedIds.push(playerId);
+        broadcastAnswerResult('ko', playerId, null);
+        STATE.locked = false;
+        STATE.lastWinnerId = null;
+        UI.winner.textContent = 'Aucun buzzer';
+        renderPlayers();
+        setJudgeButtonsEnabled(false);
+        if (STATE.roundPausedElapsed != null) {
+            STATE.roundStartTime = Date.now() - STATE.roundPausedElapsed;
+            STATE.roundPausedElapsed = null;
+        }
+        STATE.armed = true;
+        UI.armBtn.textContent = 'Activé';
+        UI.armBtn.classList.toggle('primary', false);
+        UI.armBtn.classList.toggle('danger', true);
+        localAudio.play();
+        broadcastState();
     });
 
     UI.undoPointBtn.addEventListener('click', () => {
