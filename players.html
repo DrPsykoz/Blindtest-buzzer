@@ -9,6 +9,89 @@
 	<body class="players-screen tv-cinema">
 		<div class="cinema-bg"></div>
 		<div class="cinema-overlay"></div>
+
+		<div id="introOverlay" class="intro-overlay">
+			<div class="intro-slide active" data-slide="0">
+				<div class="intro-icon">🎬</div>
+				<h2 class="intro-title">Bienvenue au Blindtest !</h2>
+				<p class="intro-text">
+					Un extrait musical est joué.<br />Soyez le premier à buzzer
+					pour tenter de répondre !
+				</p>
+			</div>
+			<div class="intro-slide" data-slide="1">
+				<div class="intro-icon">🎮</div>
+				<h2 class="intro-title">Comment buzzer ?</h2>
+				<p class="intro-text">
+					Appuyez sur le bouton de votre manette<br />dès que vous
+					pensez connaître la réponse.
+				</p>
+			</div>
+			<div class="intro-slide" data-slide="2">
+				<div class="intro-icon">⭐</div>
+				<h2 class="intro-title">Barème des points</h2>
+				<div class="intro-points">
+					<div class="intro-point-row">
+						<span class="diff-badge diff-facile">facile</span
+						><span class="intro-pts">50 pts</span>
+					</div>
+					<div class="intro-point-row">
+						<span class="diff-badge diff-moyen">moyen</span
+						><span class="intro-pts">75 pts</span>
+					</div>
+					<div class="intro-point-row">
+						<span class="diff-badge diff-difficile">difficile</span
+						><span class="intro-pts">100 pts</span>
+					</div>
+				</div>
+				<p class="intro-text">
+					Plus vous répondez vite, plus vous gagnez de points !
+				</p>
+			</div>
+			<div class="intro-slide" data-slide="3">
+				<div class="intro-icon">⚠️</div>
+				<h2 class="intro-title">Attention !</h2>
+				<p class="intro-text">
+					Si vous donnez une mauvaise réponse, vous êtes éliminé pour
+					ce morceau.<br />
+					Vous devez attendre que tous les autres joueurs aient
+					buzzé<br />
+					avant de pouvoir retenter votre chance.
+				</p>
+			</div>
+			<div class="intro-slide" data-slide="4">
+				<div class="intro-icon">📋</div>
+				<h2 class="intro-title">Déroulement</h2>
+				<div class="intro-points">
+					<div class="intro-point-row">
+						<span class="diff-badge diff-facile">facile</span
+						><span class="intro-step-arrow">→</span
+						><span class="intro-text">Récap des scores</span>
+					</div>
+					<div class="intro-point-row">
+						<span class="diff-badge diff-moyen">moyen</span
+						><span class="intro-step-arrow">→</span
+						><span class="intro-text">Récap des scores</span>
+					</div>
+					<div class="intro-point-row">
+						<span class="diff-badge diff-difficile">difficile</span
+						><span class="intro-step-arrow">→</span
+						><span class="intro-text">Score final</span>
+					</div>
+				</div>
+				<p class="intro-text">
+					3 manches de difficulté croissante, avec un récap entre
+					chaque.
+				</p>
+			</div>
+			<div class="intro-slide" data-slide="5">
+				<div class="intro-icon">🏆</div>
+				<h2 class="intro-title">Bonne chance à tous !</h2>
+				<p class="intro-text">La partie va bientôt commencer…</p>
+			</div>
+			<div class="intro-dots" id="introDots"></div>
+		</div>
+
 		<main class="container players-main">
 			<section class="card cinema-card main-card">
 				<div class="section-title">
@@ -25,14 +108,6 @@
 						alt=""
 					/>
 					<div id="playerWinner" class="winner">En attente…</div>
-				</div>
-				<div class="details">
-					<div id="playerSub" class="subtext">
-						Appuyez sur votre buzzer
-					</div>
-					<div id="feedbackTrack" class="feedback-track hidden"></div>
-					<div id="pointsCounter" class="points-counter hidden"></div>
-					<div id="playerCategory" class="subtext">Difficulté: —</div>
 					<div id="playerRecap" class="recap-panel hidden">
 						<div id="playerRecapTitle" class="subtext">
 							Récap scores
@@ -42,6 +117,14 @@
 							class="players players-tv"
 						></div>
 					</div>
+				</div>
+				<div class="details">
+					<div id="playerSub" class="subtext">
+						Appuyez sur votre buzzer
+					</div>
+					<div id="feedbackTrack" class="feedback-track hidden"></div>
+					<div id="pointsCounter" class="points-counter hidden"></div>
+					<div id="playerCategory" class="subtext">Difficulté: —</div>
 					<div class="hint">
 						Cet écran se met à jour automatiquement.
 					</div>
@@ -53,6 +136,15 @@
 			<div class="block-title">Classement</div>
 			<div id="playerList" class="players players-tv"></div>
 		</aside>
+
+		<div id="victoryOverlay" class="victory-overlay hidden">
+			<canvas id="fireworksCanvas" class="fireworks-canvas"></canvas>
+			<div class="victory-content">
+				<div class="victory-icon">🏆</div>
+				<h2 id="victoryTitle" class="victory-title">Victoire !</h2>
+				<div id="victoryPodium" class="victory-podium"></div>
+			</div>
+		</div>
 
 		<script src="players.js"></script>
 	</body>

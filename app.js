@@ -10,6 +10,8 @@ const UI = {
     validateBtn: document.getElementById('validateBtn'),
     invalidateBtn: document.getElementById('invalidateBtn'),
     openPlayersBtn: document.getElementById('openPlayersBtn'),
+    toggleIntroBtn: document.getElementById('toggleIntroBtn'),
+    nextAfterValidateBtn: document.getElementById('nextAfterValidateBtn'),
     localFolderInput: document.getElementById('localFolderInput'),
     localResults: document.getElementById('localResults'),
     localInvalidResults: document.getElementById('localInvalidResults'),
@@ -79,8 +81,9 @@ const LOCAL_ORDER_KEY = 'blindtest-local-order-v1';
 
 const DIFFICULTY_ORDER = ['facile', 'moyen', 'difficile'];
 
-const POINTS_BY_DIFFICULTY = { facile: 50, moyen: 100, difficile: 200 };
+const POINTS_BY_DIFFICULTY = { facile: 50, moyen: 75, difficile: 100 };
 const POINTS_DECAY_SECONDS = 30;
+const POINTS_DELAY_SECONDS = 3;
 
 const CHANNEL_NAME = 'blindtest-channel';
 const broadcastChannel = 'BroadcastChannel' in window ? new BroadcastChannel(CHANNEL_NAME) : null;
@@ -102,6 +105,7 @@ function broadcastState() {
             disqualifiedIds: STATE.disqualifiedIds,
             roundStartTime: STATE.roundStartTime,
             roundPausedElapsed: STATE.roundPausedElapsed,
+            gameFinished: STATE.game.finished,
         },
     });
 }
@@ -143,6 +147,7 @@ function loadMappings() {
             STATE.players = STATE.players.map((p, i) => ({
                 ...p,
                 mapping: data[i]?.mapping ?? null,
+                name: data[i]?.name || p.name,
             }));
         }
     } catch {
@@ -163,7 +168,11 @@ function renderPlayers() {
                 : 'Non attribué';
 
             card.innerHTML = `
-            <div class="label"><span class="swatch" aria-hidden="true"></span>${player.name}</div>
+            <div class="label">
+                <span class="swatch" aria-hidden="true"></span>
+                <span class="player-name" data-player-id="${player.id}">${player.name}</span>
+                <button class="btn-edit-name" data-player-id="${player.id}" title="Renommer">✎</button>
+            </div>
             <div class="mapping">${mappingText}</div>
                 <div class="score-row">
                     <span class="score-label">Score</span>
@@ -212,7 +221,7 @@ function resetRound() {
 
 function setArmed(value) {
     STATE.armed = value;
-    if (value) STATE.roundStartTime = Date.now();
+    if (value) STATE.roundStartTime = Date.now() + POINTS_DELAY_SECONDS * 1000;
     UI.armBtn.textContent = value ? 'Activé' : 'Activer';
     UI.armBtn.classList.toggle('primary', !value);
     UI.armBtn.classList.toggle('danger', value);
@@ -437,6 +446,21 @@ function exitRecap() {
     broadcastState();
 }
 
+let nextBtnTimer = null;
+
+function setValidatedState(active) {
+    UI.nextAfterValidateBtn.classList.toggle('hidden', !active);
+    UI.validateBtn.parentElement.classList.toggle('hidden', active);
+    document.querySelector('.btn-group-transport').classList.toggle('hidden', active);
+    if (nextBtnTimer) { clearTimeout(nextBtnTimer); nextBtnTimer = null; }
+    if (active) {
+        UI.nextAfterValidateBtn.disabled = true;
+        nextBtnTimer = setTimeout(() => { UI.nextAfterValidateBtn.disabled = false; }, 3000);
+    } else {
+        UI.nextAfterValidateBtn.disabled = false;
+    }
+}
+
 function setJudgeButtonsEnabled(enabled) {
     UI.validateBtn.disabled = !enabled;
     UI.invalidateBtn.disabled = !enabled;
@@ -450,7 +474,8 @@ function calculatePoints() {
     const diff = STATE.game.currentDifficulty || 'facile';
     const maxPts = POINTS_BY_DIFFICULTY[diff] || 50;
     if (!STATE.roundStartTime) return maxPts;
-    const elapsed = (STATE.roundPausedElapsed != null ? STATE.roundPausedElapsed : Date.now() - STATE.roundStartTime) / 1000;
+    const now = STATE.roundPausedElapsed != null ? STATE.roundPausedElapsed : Date.now() - STATE.roundStartTime;
+    const elapsed = Math.max(0, now) / 1000;
     const ratio = Math.max(0, 1 - elapsed / POINTS_DECAY_SECONDS);
     return Math.max(Math.round(maxPts * 0.1), Math.round(maxPts * ratio));
 }
@@ -800,7 +825,13 @@ function playLocalTrack() {
     if (localAudio.src && !localAudio.ended && localAudio.currentTime > 0) {
         localAudio.play();
         if (STATE.game.started) {
-            setArmed(true);
+            if (STATE.roundPausedElapsed != null && STATE.roundStartTime) {
+                STATE.roundStartTime = Date.now() - STATE.roundPausedElapsed;
+                STATE.roundPausedElapsed = null;
+                broadcastState();
+            } else {
+                setArmed(true);
+            }
         }
         updateNowPlaying(getCurrentTrack(), 'Lecture');
         return;
@@ -823,7 +854,11 @@ function playLocalTrack() {
 
 function pauseLocalTrack() {
     localAudio.pause();
+    if (STATE.armed && !STATE.locked && STATE.roundStartTime) {
+        STATE.roundPausedElapsed = Date.now() - STATE.roundStartTime;
+    }
     updateNowPlaying(getCurrentTrack(), 'En pause');
+    broadcastState();
 }
 
 function nextLocalTrack() {
@@ -852,6 +887,7 @@ function playNextGameTrack() {
         updateGameStatusUI();
         updateNowPlaying(getCurrentTrack(), 'Terminé');
         renderRecap();
+        broadcastState();
         return;
     }
 
@@ -873,6 +909,7 @@ function playNextGameTrack() {
         updateGameStatusUI();
         updateNowPlaying(getCurrentTrack(), 'Terminé');
         renderRecap();
+        broadcastState();
         return;
     }
     if (!STATE.game.blacklistIds.includes(nextTrack.id)) {
@@ -954,7 +991,10 @@ function init() {
     setupKeyboardFallback();
     pollGamepads();
 
-    localAudio.addEventListener('ended', () => nextLocalTrack());
+    localAudio.addEventListener('ended', () => {
+        if (!UI.nextAfterValidateBtn.classList.contains('hidden')) return;
+        nextLocalTrack();
+    });
     localAudio.addEventListener('play', () => updateNowPlaying(getCurrentTrack(), 'Lecture'));
     localAudio.addEventListener('pause', () => updateNowPlaying(getCurrentTrack(), 'En pause'));
     localAudio.addEventListener('error', () => {
@@ -975,6 +1015,12 @@ function init() {
         broadcastAnswerResult('ok', playerId, track?.name || null, pts || 0);
         resetRound();
         setArmed(false);
+        setValidatedState(true);
+    });
+
+    UI.nextAfterValidateBtn.addEventListener('click', () => {
+        setValidatedState(false);
+        nextLocalTrack();
     });
 
     UI.invalidateBtn.addEventListener('click', () => {
@@ -1011,6 +1057,37 @@ function init() {
     });
 
     UI.players.addEventListener('click', (event) => {
+        // Edit name button
+        const editBtn = event.target.closest('.btn-edit-name');
+        if (editBtn) {
+            const playerId = Number(editBtn.dataset.playerId);
+            const player = STATE.players.find(p => p.id === playerId);
+            if (!player) return;
+            const nameSpan = UI.players.querySelector(`.player-name[data-player-id="${playerId}"]`);
+            if (!nameSpan) return;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'input-edit-name';
+            input.value = player.name;
+            input.maxLength = 20;
+            nameSpan.replaceWith(input);
+            editBtn.classList.add('hidden');
+            input.focus();
+            input.select();
+            function commitName() {
+                const newName = input.value.trim() || player.name;
+                player.name = newName;
+                saveMappings();
+                renderPlayers();
+            }
+            input.addEventListener('blur', commitName);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') input.blur();
+                if (e.key === 'Escape') { input.value = player.name; input.blur(); }
+            });
+            return;
+        }
+
         const button = event.target.closest('button[data-action]');
         if (!button) return;
         const playerId = Number(button.dataset.playerId);
@@ -1038,6 +1115,17 @@ function init() {
     if (UI.openPlayersBtn) {
         UI.openPlayersBtn.addEventListener('click', () => {
             window.open('players.html', '_blank');
+        });
+    }
+
+    if (UI.toggleIntroBtn) {
+        let introVisible = true;
+        UI.toggleIntroBtn.addEventListener('click', () => {
+            introVisible = !introVisible;
+            UI.toggleIntroBtn.textContent = introVisible ? '📝 Masquer intro' : '📝 Afficher intro';
+            if (broadcastChannel) {
+                broadcastChannel.postMessage({ type: 'intro', payload: { visible: introVisible } });
+            }
         });
     }
 
