@@ -990,6 +990,10 @@ function init() {
             STATE.roundStartTime = Date.now() - STATE.roundPausedElapsed;
             STATE.roundPausedElapsed = null;
         }
+        const allDisqualified = STATE.players.every((p) => STATE.disqualifiedIds.includes(p.id));
+        if (allDisqualified) {
+            STATE.disqualifiedIds = [];
+        }
         STATE.armed = true;
         UI.armBtn.textContent = 'Activé';
         UI.armBtn.classList.toggle('primary', false);
