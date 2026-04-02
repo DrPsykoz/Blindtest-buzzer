@@ -873,6 +873,10 @@ body.players-screen {
 	font-variant-numeric: tabular-nums;
 }
 
+.recap-panel .score-number {
+	color: rgba(255, 255, 255, 1);
+}
+
 .players-screen .card {
 	text-align: center;
 }

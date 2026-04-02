@@ -223,7 +223,7 @@ function renderRecap() {
             }
             card.innerHTML = `
                 <div class="label"><span class="swatch" aria-hidden="true"></span>${player.name}${moveHtml}</div>
-                <div class="score"><span class="score-text">SCORE ${score}</span></div>
+                <div class="score"><span class="score-text">SCORE <span class="score-number">${score}</span></span></div>
             `;
             UI.recapList.appendChild(card);
         });
