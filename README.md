@@ -22,14 +22,14 @@
 ### Lancer l'application en mode desktop
 
 1. Installe les dependances:
-	- `npm install`
+    - `npm install`
 2. Lance l'application Electron:
-	- `npm start`
+    - `npm start`
 
 ### Generer un .exe Windows
 
 1. Build installeur Windows:
-	- `npm run dist`
+    - `npm run dist`
 2. Le fichier sera genere dans le dossier `release/`.
 
 Note: le dossier `local/` est exclu du package desktop pour eviter d'embarquer de gros fichiers audio. Tu peux toujours charger tes morceaux localement depuis l'application via la selection de dossier.

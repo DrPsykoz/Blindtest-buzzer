@@ -1,39 +1,39 @@
 name: Build Electron Windows
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    workflow_dispatch:
+    push:
+        branches:
+            - main
+        tags:
+            - "v*"
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+    build-windows:
+        runs-on: windows-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: npm
 
-      - name: Install dependencies
-        run: npm install
+            - name: Install dependencies
+              run: npm install
 
-      - name: Build Windows installer
-        run: npm run dist
+            - name: Build Windows installer
+              run: npm run dist
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: blindtest-buzzer-windows
-          path: |
-            release/*.exe
-            release/*.yml
-            release/*.blockmap
-          if-no-files-found: error
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: blindtest-buzzer-windows
+                  path: |
+                      release/*.exe
+                      release/*.yml
+                      release/*.blockmap
+                  if-no-files-found: error
