@@ -46,6 +46,9 @@
 						<button id="toggleIntroBtn" class="btn-ghost">
 							📝 Masquer intro
 						</button>
+						<button id="toggleSoundsBtn" class="btn-ghost">
+							🔊 Sons custom
+						</button>
 					</div>
 				</section>
 
@@ -160,6 +163,15 @@
 				</div>
 				<div class="row">
 					<label class="field">
+						<span>Thème</span>
+						<select id="themeSelect">
+							<option value="cinema">🎬 Cinéma</option>
+							<option value="musique">🎵 Musique</option>
+						</select>
+					</label>
+				</div>
+				<div class="row" id="difficultyRow">
+					<label class="field">
 						<span>Difficulté</span>
 						<select id="localDifficulty">
 							<option value="all">Toutes</option>
@@ -179,7 +191,7 @@
 					</label>
 				</div>
 				<div id="localSelection" class="hint">Aucune sélection.</div>
-				<div class="hint">
+				<div class="hint" id="difficultyHint">
 					Astuce: place tes fichiers dans des dossiers "facile / moyen
 					/ difficile".
 				</div>
@@ -188,7 +200,7 @@
 						<h3>Fichiers valides</h3>
 						<div id="localResults" class="results"></div>
 					</div>
-					<div class="local-panel">
+					<div class="local-panel" id="invalidPanel">
 						<h3>À corriger <span id="localInvalidCount"></span></h3>
 						<div id="localInvalidResults" class="results"></div>
 						<div class="hint">

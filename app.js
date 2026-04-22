@@ -34,6 +34,8 @@ const UI = {
     recapTitle: document.getElementById('recapTitle'),
     recapList: document.getElementById('recapList'),
     continueCategoryBtn: document.getElementById('continueCategoryBtn'),
+    themeSelect: document.getElementById('themeSelect'),
+    toggleSoundsBtn: document.getElementById('toggleSoundsBtn'),
 };
 
 const STATE = {
@@ -61,6 +63,7 @@ const STATE = {
         nextDifficulty: null,
         completedDifficulty: null,
     },
+    theme: 'cinema',
     localTracks: [],
     localIndex: -1,
     localCurrentId: null,
@@ -78,8 +81,17 @@ const STATE = {
 const STORAGE_KEY = 'blindtest-buzzer-mappings-v1';
 const LOCAL_DIFFICULTY_KEY = 'blindtest-local-difficulty-v1';
 const LOCAL_ORDER_KEY = 'blindtest-local-order-v1';
+const THEME_KEY = 'blindtest-theme-v1';
+const CUSTOM_SOUNDS_KEY = 'blindtest-custom-sounds-v1';
+
+const THEMES = {
+    cinema: { label: 'Cinéma', icon: '🎬', marquee: 'Blindtest Cinéma • Silence dans la salle' },
+    musique: { label: 'Musique', icon: '🎵', marquee: 'Blindtest Musique • À vos oreilles' },
+};
 
 const DIFFICULTY_ORDER = ['facile', 'moyen', 'difficile'];
+
+function isMusique() { return STATE.theme === 'musique'; }
 
 const POINTS_BY_DIFFICULTY = { facile: 50, moyen: 75, difficile: 100 };
 const POINTS_DECAY_SECONDS = 30;
@@ -106,6 +118,7 @@ function broadcastState() {
             roundStartTime: STATE.roundStartTime,
             roundPausedElapsed: STATE.roundPausedElapsed,
             gameFinished: STATE.game.finished,
+            theme: STATE.theme || 'cinema',
         },
     });
 }
@@ -381,8 +394,14 @@ async function getNormalizedBuffer(soundFile) {
     return payload;
 }
 
+let customSoundsEnabled = localStorage.getItem(CUSTOM_SOUNDS_KEY) !== 'off';
+
+function updateSoundsBtn() {
+    UI.toggleSoundsBtn.textContent = customSoundsEnabled ? '🔊 Sons custom' : '🔇 Sons custom';
+}
+
 async function playPlayerSound(player) {
-    if (player?.soundFile) {
+    if (customSoundsEnabled && player?.soundFile) {
         try {
             const ctx = getSoundContext();
             await ctx.resume();
@@ -406,10 +425,14 @@ function logDebug(info) {
 }
 
 function updateGameStatusUI() {
-    const categoryLabel = STATE.game.currentDifficulty
-        ? STATE.game.currentDifficulty
-        : '—';
-    UI.currentCategory.textContent = `Difficulté: ${categoryLabel}`;
+    if (isMusique()) {
+        UI.currentCategory.textContent = '';
+    } else {
+        const categoryLabel = STATE.game.currentDifficulty
+            ? STATE.game.currentDifficulty
+            : '—';
+        UI.currentCategory.textContent = `Difficulté: ${categoryLabel}`;
+    }
     if (STATE.game.inRecap) {
         UI.gameStatus.textContent = 'Partie: récap scores';
         return;
@@ -472,7 +495,7 @@ function pauseAllPlayback() {
 
 function calculatePoints() {
     const diff = STATE.game.currentDifficulty || 'facile';
-    const maxPts = POINTS_BY_DIFFICULTY[diff] || 50;
+    const maxPts = isMusique() ? 75 : (POINTS_BY_DIFFICULTY[diff] || 50);
     if (!STATE.roundStartTime) return maxPts;
     const now = STATE.roundPausedElapsed != null ? STATE.roundPausedElapsed : Date.now() - STATE.roundStartTime;
     const elapsed = Math.max(0, now) / 1000;
@@ -531,8 +554,24 @@ function loadLocalSettings() {
     if (orderMode === 'manual' || orderMode === 'az' || orderMode === 'za' || orderMode === 'random') {
         STATE.localOrderMode = orderMode;
     }
+    const theme = localStorage.getItem(THEME_KEY);
+    if (theme && THEMES[theme]) {
+        STATE.theme = theme;
+    }
     if (UI.localDifficulty) UI.localDifficulty.value = STATE.localDifficulty;
     if (UI.localOrder) UI.localOrder.value = STATE.localOrderMode;
+    if (UI.themeSelect) UI.themeSelect.value = STATE.theme;
+    applyThemeUI();
+}
+
+function applyThemeUI() {
+    const hide = isMusique();
+    const diffRow = document.getElementById('difficultyRow');
+    const diffHint = document.getElementById('difficultyHint');
+    const invalidPanel = document.getElementById('invalidPanel');
+    if (diffRow) diffRow.classList.toggle('hidden', hide);
+    if (diffHint) diffHint.classList.toggle('hidden', hide);
+    if (invalidPanel) invalidPanel.classList.toggle('hidden', hide);
 }
 
 function setLocalDifficulty(value) {
@@ -578,6 +617,7 @@ function resetLocalTracks() {
 }
 
 function detectDifficulty(file) {
+    if (isMusique()) return 'facile';
     const path = (file.webkitRelativePath || '').toLowerCase();
     if (/(^|\/)(facile)(\/|$)/.test(path)) return 'facile';
     if (/(^|\/)(moyen)(\/|$)/.test(path)) return 'moyen';
@@ -648,11 +688,13 @@ function orderTracks(tracks, bucketKey) {
 
 function getActiveLocalTracks() {
     let tracks = STATE.localTracks;
-    tracks = tracks.filter((t) => t.difficulty !== 'inconnu');
-    if (STATE.localDifficulty !== 'all') {
-        tracks = tracks.filter((t) => t.difficulty === STATE.localDifficulty);
+    if (!isMusique()) {
+        tracks = tracks.filter((t) => t.difficulty !== 'inconnu');
+        if (STATE.localDifficulty !== 'all') {
+            tracks = tracks.filter((t) => t.difficulty === STATE.localDifficulty);
+        }
     }
-    const bucketKey = STATE.localDifficulty === 'all' ? 'all' : STATE.localDifficulty;
+    const bucketKey = (isMusique() || STATE.localDifficulty === 'all') ? 'all' : STATE.localDifficulty;
     return orderTracks(tracks, bucketKey);
 }
 
@@ -666,6 +708,10 @@ function getRemainingTracksForDifficulty(difficulty) {
 }
 
 function resolveNextDifficulty() {
+    if (isMusique()) {
+        const remaining = STATE.localTracks.filter(t => !STATE.game.blacklistIds.includes(t.id));
+        return remaining.length ? 'facile' : null;
+    }
     if (!STATE.game.currentDifficulty) {
         for (const difficulty of DIFFICULTY_ORDER) {
             if (getRemainingTracksForDifficulty(difficulty).length) {
@@ -710,16 +756,22 @@ function moveLocalTrack(index, direction) {
 
 function renderLocalTracks() {
     UI.localResults.innerHTML = '';
-    // Build play-order list: facile → moyen → difficile, each sorted by current order mode
-    const tracks = [];
-    for (const diff of DIFFICULTY_ORDER) {
-        const bucket = orderTracks(
-            STATE.localTracks.filter((t) => t.difficulty === diff),
-            diff
-        );
-        tracks.push(...bucket);
+    let tracks;
+    let invalid;
+    if (isMusique()) {
+        tracks = orderTracks(STATE.localTracks, 'all');
+        invalid = [];
+    } else {
+        tracks = [];
+        for (const diff of DIFFICULTY_ORDER) {
+            const bucket = orderTracks(
+                STATE.localTracks.filter((t) => t.difficulty === diff),
+                diff
+            );
+            tracks.push(...bucket);
+        }
+        invalid = STATE.localTracks.filter((t) => t.difficulty === 'inconnu');
     }
-    const invalid = STATE.localTracks.filter((t) => t.difficulty === 'inconnu');
 
     UI.localInvalidResults.innerHTML = '';
     UI.localInvalidCount.textContent = invalid.length ? `(${invalid.length})` : '';
@@ -754,10 +806,12 @@ function renderLocalTracks() {
 
         const meta = document.createElement('div');
         meta.className = 'meta-badges';
-        const diffBadge = document.createElement('span');
-        diffBadge.className = `badge ${track.difficulty}`;
-        diffBadge.textContent = track.difficulty === 'inconnu' ? 'Sans niveau' : track.difficulty;
-        meta.appendChild(diffBadge);
+        if (!isMusique()) {
+            const diffBadge = document.createElement('span');
+            diffBadge.className = `badge ${track.difficulty}`;
+            diffBadge.textContent = track.difficulty === 'inconnu' ? 'Sans niveau' : track.difficulty;
+            meta.appendChild(diffBadge);
+        }
         info.appendChild(title);
         info.appendChild(meta);
 
@@ -951,8 +1005,12 @@ function updateNowPlaying(track, status) {
         return;
     }
     UI.nowPlayingTitle.textContent = track.name;
-    const diff = track.difficulty === 'inconnu' ? 'Sans niveau' : track.difficulty;
-    UI.nowPlayingMeta.textContent = `Difficulté: ${diff}`;
+    if (isMusique()) {
+        UI.nowPlayingMeta.textContent = track.path || '';
+    } else {
+        const diff = track.difficulty === 'inconnu' ? 'Sans niveau' : track.difficulty;
+        UI.nowPlayingMeta.textContent = `Difficulté: ${diff}`;
+    }
     UI.nowPlayingStatus.textContent = status || 'Lecture';
 }
 
@@ -1129,6 +1187,15 @@ function init() {
         });
     }
 
+    if (UI.toggleSoundsBtn) {
+        updateSoundsBtn();
+        UI.toggleSoundsBtn.addEventListener('click', () => {
+            customSoundsEnabled = !customSoundsEnabled;
+            localStorage.setItem(CUSTOM_SOUNDS_KEY, customSoundsEnabled ? 'on' : 'off');
+            updateSoundsBtn();
+        });
+    }
+
     UI.localFolderInput.addEventListener('change', (event) => {
         const files = [...event.target.files];
         loadLocalFiles(files);
@@ -1141,6 +1208,17 @@ function init() {
     UI.localOrder.addEventListener('change', (event) => {
         setLocalOrderMode(event.target.value);
     });
+
+    if (UI.themeSelect) {
+        UI.themeSelect.addEventListener('change', (event) => {
+            STATE.theme = event.target.value;
+            localStorage.setItem(THEME_KEY, STATE.theme);
+            applyThemeUI();
+            STATE.localTracks.forEach(t => { t.difficulty = detectDifficulty(t.file); });
+            renderLocalTracks();
+            broadcastState();
+        });
+    }
 
     UI.localPlayBtn.addEventListener('click', () => {
         playLocalTrack();

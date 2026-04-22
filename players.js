@@ -14,6 +14,12 @@ const UI = {
     victoryTitle: document.getElementById('victoryTitle'),
     victoryPodium: document.getElementById('victoryPodium'),
     fireworksCanvas: document.getElementById('fireworksCanvas'),
+    marquee: document.getElementById('playerMarquee'),
+};
+
+const THEMES = {
+    cinema: { label: 'Cinéma', icon: '🎬', marquee: 'Blindtest Cinéma • Silence dans la salle' },
+    musique: { label: 'Musique', icon: '🎵', marquee: 'Blindtest Musique • À vos oreilles' },
 };
 
 const GIF_OK = ['gifs/ok/1.gif', 'gifs/ok/2.gif', 'gifs/ok/3.gif', 'gifs/ok/4.gif', 'gifs/ok/5.gif', 'gifs/ok/6.gif', 'gifs/ok/7.gif', 'gifs/ok/8.gif', 'gifs/ok/9.gif', 'gifs/ok/10.gif'];
@@ -81,6 +87,7 @@ const STATE = {
     roundStartTime: null,
     roundPausedElapsed: null,
     previousRanking: {},
+    theme: 'cinema',
 };
 
 const POINTS_BY_DIFFICULTY = { facile: 50, moyen: 75, difficile: 100 };
@@ -89,7 +96,7 @@ let pointsTickerId = null;
 
 function calcLivePoints() {
     const diff = STATE.currentDifficulty || 'facile';
-    const maxPts = POINTS_BY_DIFFICULTY[diff] || 50;
+    const maxPts = (STATE.theme === 'musique') ? 75 : (POINTS_BY_DIFFICULTY[diff] || 50);
     if (!STATE.roundStartTime) return maxPts;
     const now = STATE.roundPausedElapsed != null ? STATE.roundPausedElapsed : Date.now() - STATE.roundStartTime;
     const elapsed = Math.max(0, now) / 1000;
@@ -153,8 +160,12 @@ function renderPlayers() {
 
 function renderWinner() {
     if (feedbackActive) return;
-    const category = STATE.currentDifficulty || '—';
-    UI.category.innerHTML = `Manche en cours <span class="diff-badge diff-${category}">${category}</span>`;
+    if (STATE.theme === 'musique') {
+        UI.category.innerHTML = '';
+    } else {
+        const category = STATE.currentDifficulty || '—';
+        UI.category.innerHTML = `Manche en cours <span class="diff-badge diff-${category}">${category}</span>`;
+    }
     if (STATE.gameInRecap) {
         UI.winner.textContent = 'Récap des scores';
         UI.sub.textContent = '';
@@ -194,8 +205,12 @@ function renderRecap() {
     UI.recapPanel.classList.toggle('hidden', !STATE.gameInRecap);
     if (!STATE.gameInRecap) return;
 
-    const completed = STATE.completedDifficulty || '—';
-    UI.recapTitle.innerHTML = `Fin de la manche <span class="diff-badge diff-${completed}">${completed}</span>`;
+    if (STATE.theme === 'musique') {
+        UI.recapTitle.innerHTML = 'Récap des scores';
+    } else {
+        const completed = STATE.completedDifficulty || '—';
+        UI.recapTitle.innerHTML = `Fin de la manche <span class="diff-badge diff-${completed}">${completed}</span>`;
+    }
 
     const currentRanking = getRankingMap(STATE.players);
     const prev = STATE.previousRanking;
@@ -246,6 +261,8 @@ function applyState(payload) {
     STATE.roundStartTime = payload.roundStartTime || null;
     STATE.roundPausedElapsed = payload.roundPausedElapsed ?? null;
     STATE.gameFinished = Boolean(payload.gameFinished);
+    STATE.theme = payload.theme || 'cinema';
+    applyTheme(STATE.theme);
     if (exitingRecap) {
         STATE.previousRanking = getRankingMap(STATE.players);
     }
@@ -275,6 +292,74 @@ function triggerPing(playerId) {
     card.classList.remove('ping');
     void card.offsetWidth;
     card.classList.add('ping');
+}
+
+let currentTheme = 'cinema';
+
+function applyTheme(themeId) {
+    if (themeId === currentTheme) return;
+    currentTheme = themeId;
+    const theme = THEMES[themeId] || THEMES.cinema;
+
+    // Swap body theme class
+    document.body.classList.remove('tv-cinema', 'tv-musique');
+    document.body.classList.add(`tv-${themeId}`);
+
+    // Swap background & overlay classes
+    const bg = document.getElementById('themeBg');
+    const overlay = document.getElementById('themeOverlay');
+    if (bg) { bg.className = `${themeId}-bg`; }
+    if (overlay) { overlay.className = `${themeId}-overlay`; }
+
+    // Update marquee
+    if (UI.marquee) UI.marquee.textContent = theme.marquee;
+
+    // Update intro icon
+    const introIcon = document.querySelector('.intro-slide[data-slide="0"] .intro-icon');
+    if (introIcon) introIcon.textContent = theme.icon;
+
+    // Update intro slides for points & game flow
+    const pointsSlide = document.querySelector('.intro-slide[data-slide="2"]');
+    const flowSlide = document.querySelector('.intro-slide[data-slide="4"]');
+    if (themeId === 'musique') {
+        if (pointsSlide) {
+            pointsSlide.querySelector('.intro-title').textContent = 'Barème des points';
+            pointsSlide.querySelector('.intro-points').innerHTML = `
+                <div class="intro-point-row">
+                    <span class="intro-pts" style="font-size:1.4em">75 pts max</span>
+                </div>
+            `;
+            pointsSlide.querySelector('.intro-text').textContent = 'Plus vous répondez vite, plus vous gagnez de points !';
+        }
+        if (flowSlide) {
+            flowSlide.querySelector('.intro-title').textContent = 'Déroulement';
+            flowSlide.querySelector('.intro-points').innerHTML = `
+                <div class="intro-point-row">
+                    <span class="intro-text">Tous les morceaux se jouent à la suite</span>
+                </div>
+            `;
+            flowSlide.querySelector(':scope > .intro-text').textContent = 'Pas de manches, on enchaîne jusqu\u2019au dernier morceau !';
+        }
+    } else {
+        if (pointsSlide) {
+            pointsSlide.querySelector('.intro-title').textContent = 'Barème des points';
+            pointsSlide.querySelector('.intro-points').innerHTML = `
+                <div class="intro-point-row"><span class="diff-badge diff-facile">facile</span><span class="intro-pts">50 pts</span></div>
+                <div class="intro-point-row"><span class="diff-badge diff-moyen">moyen</span><span class="intro-pts">75 pts</span></div>
+                <div class="intro-point-row"><span class="diff-badge diff-difficile">difficile</span><span class="intro-pts">100 pts</span></div>
+            `;
+            pointsSlide.querySelector('.intro-text').textContent = 'Plus vous répondez vite, plus vous gagnez de points !';
+        }
+        if (flowSlide) {
+            flowSlide.querySelector('.intro-title').textContent = 'Déroulement';
+            flowSlide.querySelector('.intro-points').innerHTML = `
+                <div class="intro-point-row"><span class="diff-badge diff-facile">facile</span><span class="intro-step-arrow">→</span><span class="intro-text">Récap des scores</span></div>
+                <div class="intro-point-row"><span class="diff-badge diff-moyen">moyen</span><span class="intro-step-arrow">→</span><span class="intro-text">Récap des scores</span></div>
+                <div class="intro-point-row"><span class="diff-badge diff-difficile">difficile</span><span class="intro-step-arrow">→</span><span class="intro-text">Score final</span></div>
+            `;
+            flowSlide.querySelector(':scope > .intro-text').textContent = '3 manches de difficulté croissante, avec un récap entre chaque.';
+        }
+    }
 }
 
 let feedbackTimeout = null;
