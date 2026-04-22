@@ -1,0 +1,53 @@
+{
+  "name": "blindtest-buzzer",
+  "version": "1.0.0",
+  "description": "Blindtest Buzzer desktop app (Electron)",
+  "main": "electron/main.js",
+  "author": "Theo",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "dist:portable": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.blindtest.buzzer",
+    "productName": "Blindtest Buzzer",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "players.html",
+      "app.js",
+      "players.js",
+      "styles.css",
+      "gifs/**/*",
+      "players/**/*",
+      "!local/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    }
+  }
+}

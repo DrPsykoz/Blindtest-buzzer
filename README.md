@@ -12,6 +12,36 @@
 3. Lance un serveur local sur http://localhost:5500 (ou autre port).
 4. Ouvre la page dans ton navigateur.
 
+## Version desktop (.exe) avec Electron
+
+### Prerequis
+
+- Node.js 20+
+- npm
+
+### Lancer l'application en mode desktop
+
+1. Installe les dependances:
+	- `npm install`
+2. Lance l'application Electron:
+	- `npm start`
+
+### Generer un .exe Windows
+
+1. Build installeur Windows:
+	- `npm run dist`
+2. Le fichier sera genere dans le dossier `release/`.
+
+Note: le dossier `local/` est exclu du package desktop pour eviter d'embarquer de gros fichiers audio. Tu peux toujours charger tes morceaux localement depuis l'application via la selection de dossier.
+
+## Build automatique GitHub Actions
+
+Un workflow est fourni dans `.github/workflows/build-electron.yml`.
+
+- Declenchement automatique sur push vers `main`.
+- Declenchement manuel via l'onglet Actions.
+- Production d'un installeur Windows `.exe` en artefact telechargeable.
+
 ## Attribution des buzzers
 
 1. Clique **Mode attribution**.
