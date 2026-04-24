@@ -11,6 +11,8 @@ on:
 jobs:
     build-windows:
         runs-on: windows-latest
+        permissions:
+            contents: write
 
         steps:
             - name: Checkout
@@ -28,7 +30,22 @@ jobs:
             - name: Build Windows installer
               run: npm run dist
 
-            - name: Upload build artifacts
+            # Sur un tag v* → crée une GitHub Release et attache le .exe
+            - name: Create GitHub Release
+              if: startsWith(github.ref, 'refs/tags/v')
+              uses: softprops/action-gh-release@v2
+              with:
+                  name: "Blindtest Buzzer ${{ github.ref_name }}"
+                  draft: false
+                  prerelease: false
+                  files: |
+                      release/*.exe
+                      release/*.blockmap
+                      release/*.yml
+
+            # Sur main (hors tag) → simple artefact de build
+            - name: Upload build artifact
+              if: "!startsWith(github.ref, 'refs/tags/v')"
               uses: actions/upload-artifact@v4
               with:
                   name: blindtest-buzzer-windows
