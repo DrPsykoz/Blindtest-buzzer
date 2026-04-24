@@ -27,7 +27,7 @@ jobs:
               run: npm install
 
             - name: Build Windows installer
-              run: npm run dist
+              run: npm run dist -- --publish never
 
             # Sur un tag v* → crée une GitHub Release et attache le .exe
             - name: Create GitHub Release
